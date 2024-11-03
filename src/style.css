@@ -1,0 +1,23 @@
+*{
+  margin: 0;
+  color: #ffffff;
+  font-family: "Cambay", sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+::-webkit-scrollbar {
+  width: 12px;
+}
+
+/* Scrollbar thumb */
+::-webkit-scrollbar-thumb {
+  background-color: #4E171C;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #fff;
+}
