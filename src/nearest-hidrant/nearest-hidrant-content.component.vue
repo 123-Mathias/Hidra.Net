@@ -1,6 +1,21 @@
 <script>
+import axios from "axios";
+
 export default {
-  name: 'nearest-hidrant-content'
+  name: 'nearest-hidrant-content',
+  data() {
+    return {
+      mapUrl: "",
+    }
+  },
+  mounted() {
+    this.fetchMap();
+  },
+  methods: {
+    fetchMap() {
+      this.mapUrl='http://127.0.0.1:5000/api/v1.0/nearHydrants_map'
+    }
+  }
 }
 </script>
 
@@ -10,6 +25,7 @@ export default {
     <p>Dale click a una zona del mapa del Callao para determinar <br> tu ubicación y darte la ruta más corta para el hidrante de la capacidad deseada y más cercano a ti.</p>
     <div class="map-visualizer">
       <h1>MAP</h1>
+      <iframe v-if="mapUrl" :src="mapUrl" width="90%" allowfullscreen height="500px" style="border:none;"></iframe>
     </div>
   </div>
 
@@ -35,6 +51,10 @@ export default {
 }
 
 .map-visualizer{
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   padding-top: 2rem;
 }
 
