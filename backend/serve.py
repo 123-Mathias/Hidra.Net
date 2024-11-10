@@ -5,15 +5,18 @@ import folium
 from folium.plugins import MarkerCluster,Fullscreen
 from prim import prim,calculate_distance
 from GraphPrim import GraphPrim
+from GraphDijkstra import GraphDijkstra
 import os
 import gpxpy
 import gpxpy.gpx
 import osmnx as ox
 import networkx as nx
-
+import random
+ox.config(log_console=True, use_cache=False)
+random.seed(45)
 class Hydrant:
-    def __init__(self, districtId, lon, lat,index):
-        self.districtId = districtId
+    def __init__(self, level, lon, lat,index):
+        self.level = level
         self.lon = lon
         self.lat = lat
         self.index = index
@@ -24,11 +27,11 @@ class Hydrant:
     def getLocation(self):
         return [self.lat, self.lon]
 
-    def getDistrictId(self):
-        return self.districtId
+    def isLevelRequired(self, level):
+        return self.level == level
 
-    def isNear(self, other):
-        return calculate_distance(self.getLocation(), other.getLocation()) <= 600
+    def isNear(self, other,range):
+        return calculate_distance(self.getLocation(), other.getLocation()) <= range
 
 app = Flask(__name__)
 cors = CORS(app, resources={r"/api/*": {"origins": "*"}})
@@ -74,6 +77,7 @@ def custom_code(popup_variable_name, map_variable_name):
                    [e.latlng.lat, e.latlng.lng],
                    {}
                ).addTo(%s);
+
            }
 
            // end custom code
@@ -97,8 +101,8 @@ def hydrants_map():
 
     for index, row in sampled_gdf.iterrows():
         lon, lat = row['geometry'].coords[0]
-        districtId = row['DISTRICT']
-        hydrant = Hydrant(districtId, lon, lat, index)
+
+        hydrant = Hydrant(0, lon, lat, index)
 
         icon = folium.CustomIcon(hydrant_icon_url, icon_size=(30, 30))  # Adjust size as needed
 
@@ -107,7 +111,7 @@ def hydrants_map():
                       icon=icon).add_to(marker_cluster)
 
         for other in hydrants_cola:
-            if hydrant.isNear(other):
+            if hydrant.isNear(other,600):
                 graph.addEdge(index, other.getIndex(), calculate_distance(hydrant.getLocation(), other.getLocation()))
 
         hydrants_cola.append(hydrant)
@@ -131,60 +135,94 @@ def map_prim():
      map_path = "hydrants_map.html"
      return send_file(map_path)
 
-@app.route('/api/v1.0/nearHydrants_map' , methods=['GET'])
-def nearHydrants_map(coords= None):
+@app.route('/api/v1.0/nearHydrants_map', methods=['GET'])
+def nearHydrants_map(lat=None, lng=None):
 
-   if coords:
-       print(coords)
-       current_hydrant = Hydrant(0, coords['lat'], coords['lng'], 0)
+    if coordinates['lat'] and coordinates['lng']:
+        current_hydrant = Hydrant(None, coordinates['lng'], coordinates['lat'], None)
+        hydrants_near = [current_hydrant]
 
-   geojson_url = "HIDRANTES_PROVCALLAO.geojson"
-   map_filepath = "nearHydrants_map.html"
-   gdf = gpd.read_file(geojson_url)
-   num_hydrants = 1500
-   num_hydrants = min(num_hydrants, len(gdf))
-   sampled_gdf = gdf.sample(n=num_hydrants, random_state=1)  # Ensure reproducibility with random_state
-   sampled_gdf = sampled_gdf.reset_index(drop=True)
-   m = folium.Map(location=[-12.050, -77.120], zoom_start=13)
-   m.get_root().html.add_child(folium.Element('''<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.min.js"></script>'''))
-   marker_cluster = MarkerCluster().add_to(m)
-   Fullscreen(position='topright').add_to(m)
-   hydrants_cola = []
+    else:
+        current_hydrant = None
 
-   hydrant_icon_url = 'https://raw.githubusercontent.com/diegooo01/FindU-Images/00588368ea06164b6fae1447896d8e1c208cbac5/hidrante-de-incendio%20(1).svg'
-
-   for index, row in sampled_gdf.iterrows():
-       lon, lat = row['geometry'].coords[0]
-       districtId = row['DISTRICT']
-       hydrant = Hydrant(districtId, lon, lat, index)
-       hydrants_cola.append(hydrant)
+    geojson_url = "HIDRANTES_PROVCALLAO.geojson"
+    map_filepath = "nearHydrants_map.html"
+    gdf = gpd.read_file(geojson_url)
+    num_hydrants = 1500
+    num_hydrants = min(num_hydrants, len(gdf))
+    sampled_gdf = gdf.sample(n=num_hydrants, random_state=1)  # Ensure reproducibility with random_state
+    sampled_gdf = sampled_gdf.reset_index(drop=True)
+    if(current_hydrant): m = folium.Map(location=current_hydrant.getLocation(), zoom_start=18)
+    else: m = folium.Map(location=[-12.050, -77.120], zoom_start=16)
+    m.get_root().html.add_child(folium.Element('''<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.min.js"></script>'''))
+    marker_cluster = MarkerCluster().add_to(m)
+    if(current_hydrant):
+        folium.Marker(location=[current_hydrant.getLocation()[0], current_hydrant.getLocation()[1]], popup='Current Hydrant', icon=folium.Icon(color='red')).add_to(m)
+    Fullscreen(position='topright').add_to(m)
 
 
-       icon = folium.CustomIcon(hydrant_icon_url, icon_size=(30, 30))  # Adjust size as needed
+    hydrant_icon_url = 'https://raw.githubusercontent.com/diegooo01/FindU-Images/00588368ea06164b6fae1447896d8e1c208cbac5/hidrante-de-incendio%20(1).svg'
 
-       folium.Marker(location=hydrant.getLocation(),
+    for index, row in sampled_gdf.iterrows():
+        lon, lat = row['geometry'].coords[0]
+        level = random.randint(0, 3)
+        hydrant = Hydrant(level, lon, lat, index)
+
+
+        icon = folium.CustomIcon(hydrant_icon_url, icon_size=(30, 30))  # Adjust size as needed
+
+        folium.Marker(location=hydrant.getLocation(),
                      popup=f'Hydrant {row["FID"]}',
                      icon=icon).add_to(marker_cluster)
 
-       if coords:
-            if hydrant.isNear(current_hydrant):
-                print(current_hydrant.getLocation())
-                folium.PolyLine(locations=[hydrant.getLocation(), current_hydrant.getLocation()], color='blue').add_to(m)
+        if current_hydrant:
+            if hydrant.isNear(current_hydrant,300):
+                hydrants_near.append(hydrant)
 
-   folium.LatLngPopup().add_to(m)
+    if current_hydrant:
+        G = ox.graph_from_point((current_hydrant.getLocation()[0],current_hydrant.getLocation()[1]), dist=1000, network_type='drive')
+        graph = GraphDijkstra(len(hydrants_near))
+
+        for i in range(len(hydrants_near)):
+            for j in range(i+1, len(hydrants_near)):
+
+                orig_node = ox.distance.nearest_nodes(G, hydrants_near[i].getLocation()[1], hydrants_near[i].getLocation()[0])
+                dest_node = ox.distance.nearest_nodes(G, hydrants_near[j].getLocation()[1], hydrants_near[j].getLocation()[0])
+                if(nx.has_path(G, orig_node, dest_node)):
+                    shortest_path = nx.shortest_path(G, source=orig_node, target=dest_node, weight='length')
+                    shortest_distance = nx.shortest_path_length(G, source=orig_node, target=dest_node, weight='length')
+                    route_coords = [(G.nodes[node]['y'], G.nodes[node]['x']) for node in shortest_path]
+                    graph.addEdge(i, j, shortest_distance)
+                    graph.addRouteCoords(i,j,route_coords)
+                else:
+                    print(f"No hay camino entre {i} y {j}")
+
+        mat = graph.getMatrix()
+        for line in mat: print(line)
+        path ,cost = graph.Dijkstra(0)
+        colors = ["blue", "green", "red", "purple", "orange", "darkblue", "darkgreen", "darkred", "darkpurple", "cadetblue"]
+        i = 0
+
+        for v,u in enumerate(path):
+            if u !=-1:
+                color = colors[i]
+                folium.PolyLine(graph.getRouteCoords(u,v), color=color, weight=5, opacity=0.7).add_to(m)
+                i = i + 1
+                if(i>=len(colors)): i = 0
 
 
-   m.save(map_filepath)
+    folium.LatLngPopup().add_to(m)
 
-   html = None
-   with open(map_filepath, 'r') as mapfile:
-       html = mapfile.read()
+    m.save(map_filepath)
 
+    html = None
+    with open(map_filepath, 'r') as mapfile:
+        html = mapfile.read()
 
-   map_variable_name = find_variable_name(html, "map_")
-   popup_variable_name = find_variable_name(html, "lat_lng_popup_")
-   button_html = '''
-    <button id="calcularRutasBtn" style="position: absolute; top: 10px; left: 10px; z-index: 999;" onclick="sendCoordinates()">Calcular Rutas</button>
+    map_variable_name = find_variable_name(html, "map_")
+    popup_variable_name = find_variable_name(html, "lat_lng_popup_")
+    button_html = '''
+    <button id="calcularRutasBtn" style="position: absolute; top: 10px; left: 10px; z-index: 999;" onclick="sendCoordinates()">Guardar coordenadas</button>
     <script>
             // Función para enviar las coordenadas al backend
             function sendCoordinates() {
@@ -203,7 +241,7 @@ def nearHydrants_map(coords= None):
                     })
                     .then(response => response.json())
                     .then(data => {
-                       document.getElementById('{map_variable_name}').innerHTML = data.mapUrl;
+                         alert(data);
                     })
                     .catch(error => console.error('Error:', error));
                 } else {
@@ -211,30 +249,31 @@ def nearHydrants_map(coords= None):
                 }
             }
         </script>
-        '''
+    '''
 
-   html = html.replace('<body>', f'<body>{button_html}')
+    html = html.replace('<body>', f'<body>{button_html}')
 
+    pstart, pend = find_popup_slice(html)
 
-   pstart, pend = find_popup_slice(html)
+    with open(map_filepath, 'w') as mapfile:
+        mapfile.write(
+            html[:pstart] + \
+            custom_code(popup_variable_name, map_variable_name) + \
+            html[pend:]
+        )
 
-   with open(map_filepath, 'w') as mapfile:
-       mapfile.write(
-           html[:pstart] + \
-           custom_code(popup_variable_name, map_variable_name) + \
-           html[pend:]
-       )
-
-   return  send_file(map_filepath)
+    return  send_file(map_filepath)
 
 
 @app.route('/api/v1.0/current_point', methods=['POST'])
 def current_point():
     data = request.get_json()
-    lng, lat = data['longitude'], data['latitude']
+    coordinates['lat'] = data['latitude']
+    coordinates['lng'] = data['longitude']
+    print(coordinates)
 
-    return nearHydrants_map({'lat': lat, 'lng': lng})
-
+    return "Coordenadas recibidas correctamente."
+coordinates = { 'lat': None, 'lng': None }
 
 if __name__ == '__main__':
     app.run(debug=True)

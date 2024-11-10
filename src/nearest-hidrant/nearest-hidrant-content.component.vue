@@ -1,5 +1,4 @@
 <script>
-import axios from "axios";
 
 export default {
   name: 'nearest-hidrant-content',
@@ -13,8 +12,8 @@ export default {
   },
   methods: {
     fetchMap() {
-      this.mapUrl='http://127.0.0.1:5000/api/v1.0/nearHydrants_map'
-    }
+      this.mapUrl = `http://127.0.0.1:5000/api/v1.0/nearHydrants_map?timestamp=${new Date().getTime()}`
+    },
   }
 }
 </script>
@@ -26,6 +25,7 @@ export default {
     <div class="map-visualizer">
       <h1>MAP</h1>
       <iframe v-if="mapUrl" :src="mapUrl" width="90%" allowfullscreen height="500px" style="border:none;"></iframe>
+      <button @click="fetchMap">Calcular Ruta</button>
     </div>
   </div>
 
