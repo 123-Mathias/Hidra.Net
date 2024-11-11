@@ -12,7 +12,8 @@ import gpxpy.gpx
 import osmnx as ox
 import networkx as nx
 import random
-ox.config(log_console=True, use_cache=False)
+ox.settings.log_console = True
+ox.settings.use_cache = False
 random.seed(45)
 class Hydrant:
     def __init__(self, level, lon, lat,index):
