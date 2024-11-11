@@ -1,4 +1,4 @@
-from flask import Flask,send_file,jsonify,url_for,request
+from flask import Flask,send_file,jsonify,url_for,request,send_from_directory
 from flask_cors import CORS
 import geopandas as gpd
 import folium
@@ -33,7 +33,8 @@ class Hydrant:
     def isNear(self, other,range):
         return calculate_distance(self.getLocation(), other.getLocation()) <= range
 
-app = Flask(__name__)
+app = Flask(__name__,
+            static_folder = "../dist",)
 cors = CORS(app, resources={r"/api/*": {"origins": "*"}})
 
 def find_variable_name(html, prefix):
@@ -156,20 +157,30 @@ def nearHydrants_map(lat=None, lng=None):
     else: m = folium.Map(location=[-12.050, -77.120], zoom_start=16)
     m.get_root().html.add_child(folium.Element('''<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.min.js"></script>'''))
     marker_cluster = MarkerCluster().add_to(m)
-    if(current_hydrant):
-        folium.Marker(location=[current_hydrant.getLocation()[0], current_hydrant.getLocation()[1]], popup='Current Hydrant', icon=folium.Icon(color='red')).add_to(m)
+    if current_hydrant:
+       custom_icon = folium.CustomIcon(icon_image='../public/map-icons/fire-alert-icon.png', icon_size=(32, 32))
+       folium.Marker(
+           location=[current_hydrant.getLocation()[0], current_hydrant.getLocation()[1]],
+           popup='Current Hydrant',
+           icon=custom_icon
+       ).add_to(m)
+
     Fullscreen(position='topright').add_to(m)
 
 
-    hydrant_icon_url = 'https://raw.githubusercontent.com/diegooo01/FindU-Images/00588368ea06164b6fae1447896d8e1c208cbac5/hidrante-de-incendio%20(1).svg'
+    hydrant_icon_url = [
+    '../public/map-icons/hidrant-icon-low-level.png',
+    '../public/map-icons/hidrant-icon-mid-level.png',
+    '../public/map-icons/hidrant-icon-high-level.png',
+    ]
 
     for index, row in sampled_gdf.iterrows():
         lon, lat = row['geometry'].coords[0]
-        level = random.randint(0, 3)
+        level = random.randint(0, 2)
         hydrant = Hydrant(level, lon, lat, index)
 
 
-        icon = folium.CustomIcon(hydrant_icon_url, icon_size=(30, 30))  # Adjust size as needed
+        icon = folium.CustomIcon(hydrant_icon_url[level], icon_size=(30, 30))  # Adjust size as needed
 
         folium.Marker(location=hydrant.getLocation(),
                      popup=f'Hydrant {row["FID"]}',
@@ -274,6 +285,16 @@ def current_point():
 
     return "Coordenadas recibidas correctamente."
 coordinates = { 'lat': None, 'lng': None }
+
+
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def serve_vue(path):
+    if path != "" and os.path.exists(os.path.join(app.static_folder, path)):
+        return send_from_directory(app.static_folder, path)
+    else:
+        return send_from_directory(app.static_folder, 'index.html')
+
 
 if __name__ == '__main__':
     app.run(debug=True)
