@@ -24,8 +24,12 @@ export default {
     <p>Dale click a una zona del mapa del Callao para determinar <br> tu ubicación y darte la ruta más corta para el hidrante de la capacidad deseada y más cercano a ti.</p>
     <div class="map-visualizer">
       <h1>MAP</h1>
-      <iframe v-if="mapUrl" :src="mapUrl" width="90%" allowfullscreen height="500px" style="border:none;"></iframe>
-      <button @click="fetchMap">Calcular Ruta</button>
+      <iframe class="map" v-if="mapUrl" :src="mapUrl" width="90%" allowfullscreen height="500px" style="border: 3px solid #4E171C;"></iframe>
+      <button v-if="mapUrl" class="button-calculate" @click="fetchMap">Calcular Ruta</button>
+      <div class="loading" v-if="!mapUrl">
+        <div class="spinner"></div>
+        <p>Cargando mapa...</p>
+      </div>
     </div>
   </div>
 
@@ -47,7 +51,7 @@ export default {
 }
 
 .nearest-content p{
-  padding-top: 1.5rem;
+  padding-top: 1.3rem;
 }
 
 .map-visualizer{
@@ -56,6 +60,49 @@ export default {
   flex-direction: column;
   align-items: center;
   padding-top: 2rem;
+}
+
+.button-calculate{
+  background-color: #4E171C;
+  color: white;
+  padding: 1rem 2rem;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-top: 1rem;
+  font-size: 1.5rem;
+}
+
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 500px;
+  width: 90%;
+  border: 3px solid #4e171c;
+  border-radius: 5px;
+  color: #4e171c;
+  font-size: 1.2rem;
+}
+
+.spinner {
+  width: 50px;
+  height: 50px;
+  border: 5px solid #4e171c;
+  border-top: 5px solid transparent;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 </style>

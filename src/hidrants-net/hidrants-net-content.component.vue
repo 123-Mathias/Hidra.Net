@@ -33,8 +33,12 @@ export default {
     <p>Visualiza la Red óptima de hidrantes para su correcto mantenimiento. Con esta red <br> se tendrá un mantenimiento mucho más eficiente y exitoso de los hidrantes de la ciudad del Callao.</p>
     <div class="map-visualizer">
       <h1 class="title_map">MAP</h1>
-      <iframe v-if="map_url" :src="map_url" width="90%" allowfullscreen height="500px" style="border:none;"></iframe>
-      <h1 class="total_cost">El costo total de los caminos en km es: {{total_cost}} </h1>
+      <iframe v-if="map_url" :src="map_url" width="90%" allowfullscreen height="500px" style="border: 3px solid #4E171C;"></iframe>
+      <h1 v-if="map_url" class="total_cost">El costo total de los caminos en km es: {{total_cost}} </h1>
+      <div class="loading" v-if="!map_url">
+        <div class="spinner"></div>
+        <p>Cargando mapa...</p>
+      </div>
     </div>
   </div>
 </template>
@@ -65,6 +69,38 @@ export default {
   flex-direction: column;
   align-items: center;
   padding-top: 2rem;
+}
+
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 500px;
+  width: 90%;
+  border: 3px solid #4e171c;
+  border-radius: 5px;
+  color: #4e171c;
+  font-size: 1.2rem;
+}
+
+.spinner {
+  width: 50px;
+  height: 50px;
+  border: 5px solid #4e171c;
+  border-top: 5px solid transparent;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 </style>
