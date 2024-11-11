@@ -6,40 +6,36 @@ class GraphPrim:
     def __init__(self, V):
         self.V = V
         self.graph = defaultdict(list)
-        self.adj = [[] for _ in range(V)]  # Lista de adyacencia
+        self.adj = [[] for _ in range(V)]
 
-    # Adds an edge to an undirected graph
     def addEdge(self, u, v, w):
         self.adj[u].append((v, w))
         self.adj[v].append((u, w))
 
-    # The modified function to find MSTs for each connected component
     def PrimMST(self):
-        mst_edges_all = []  # Lista para almacenar los bordes de todos los MSTs
-        total_cost = 0  # Costo total de todos los MSTs
-        visited = [False] * self.V  # Mantener seguimiento de vértices visitados
+        mst_edges_all = []
+        total_cost = 0
+        visited = [False] * self.V
 
-        # Ejecutar Prim en cada componente no visitado
         for start_node in range(self.V):
-            if not visited[start_node]:  # Si el nodo no ha sido visitado, es un nuevo componente
-                mst_edges = []  # Lista para almacenar los bordes del MST del componente actual
-                component_cost = 0  # Costo del MST del componente actual
-                min_heap = [(0, start_node, -1)]  # (peso, nodo, nodo padre)
+            if not visited[start_node]:
+                mst_edges = []
+                component_cost = 0
+                min_heap = [(0, start_node, -1)]
 
                 while min_heap:
-                    weight, u, parent = heapq.heappop(min_heap)  # Obtener el borde con el peso mínimo
+                    weight, u, parent = heapq.heappop(min_heap)
                     if visited[u]:
                         continue
                     visited[u] = True
-                    if parent != -1:  # Si no es el nodo raíz
-                        mst_edges.append((parent, u, weight))  # Agregar borde al MST
-                        component_cost += weight  # Sumar el peso al costo del componente actual
+                    if parent != -1:
+                        mst_edges.append((parent, u, weight))
+                        component_cost += weight
 
                     for v, w in self.adj[u]:
                         if not visited[v]:
-                            heapq.heappush(min_heap, (w, v, u))  # Agregar bordes al heap
+                            heapq.heappush(min_heap, (w, v, u))
 
-                # Agregar resultados del componente actual a los resultados generales
                 mst_edges_all.extend(mst_edges)
                 total_cost += component_cost
 
